@@ -40,13 +40,13 @@ const int latchPin = 9;
 const int clockPin = 10;
 
 const long refreshInterval = 10; //refresh delay in microseconds
-const long countInterval = 500; //counter delay in milliseconds
+const long countInterval = 100; //counter delay in milliseconds
 
 long previousRefresh = 0; //previous refresh time
 long previousCount = 0; //previous count time
 
 int refreshLoop = 0;  //counter for refreshing loop
-int countLoop = 00; //counter for counting loop
+int countLoop = 0; //counter for counting loop
 
 int num[] = {-1,-1,-1,-1};  //array for display numbers, {ones, tens, hundreds, thousands}
 
@@ -75,7 +75,7 @@ void loop() {
       refreshLoop = 0;
 
     pickDigit(refreshLoop);
-    pickNumber(countLoop);
+    displayNumber();
 
     refreshLoop++;
   }
@@ -83,6 +83,8 @@ void loop() {
   //test timer loop, increases count by one at each interval of countInterval
   if (currentCount - previousCount > countInterval) {
     previousCount = currentCount;
+
+    splitNumber(countLoop);
 
     countLoop ++;
 
@@ -106,16 +108,14 @@ void pickDigit(int j) {
   clearLEDs();
 }
 
-void pickNumber(int j) {
+void displayNumber() {
   //turn on the LEDs accoring to the number from 0-9
-  splitNumber(j);
+  int dispNum=num[refreshLoop];
 
-  int displayNum = num[refreshLoop];
-
-  if (displayNum == -1)
+  if (dispNum == -1)
     clearLEDs();
   else
-    updateShiftRegister(numbers[displayNum]);
+    updateShiftRegister(numbers[dispNum]);
 }
 
 void splitNumber(int n) {
