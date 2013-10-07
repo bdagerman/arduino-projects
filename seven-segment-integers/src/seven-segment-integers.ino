@@ -84,7 +84,7 @@ void clearLEDs() {
 
 void pickDigit(int j) {
   // pick which digit to display depending on the value passed in j
-  for (int i=1; i<4; i++)
+  for (int i=0; i<4; i++)
     digitalWrite(digits[i], HIGH);
 
   digitalWrite(digits[j], LOW);
@@ -106,7 +106,7 @@ void splitNumber(int n) {
   //takes the input n and puts into the array num, split in ones, tens, hundreds, and thousands place
   
   //clear previous values of the num array, -1 value allows checking to see if a new value has been placed
-  for (int i=0; i<4; i++)
+  for (int i=1; i<4; i++)
     num[i] = -1;
 
   //if n is 0-9
@@ -147,7 +147,7 @@ void updateShiftRegister(byte leds) {
 }
 
 //global variables for the test function
-const long testInterval = 500; //counter delay in milliseconds
+const long testInterval = 1000; //counter delay in milliseconds
 long previousTestTime = 0; //previous count time
 int testLoop = 0; //counter for counting loop
 
