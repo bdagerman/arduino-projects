@@ -40,15 +40,10 @@ const int latchPin = 9;
 const int clockPin = 10;
 
 const long refreshInterval = 10; //refresh delay in microseconds
-const long countInterval = 100; //counter delay in milliseconds
-
 long previousRefresh = 0; //previous refresh time
-long previousCount = 0; //previous count time
-
 int refreshLoop = 0;  //counter for refreshing loop
-int countLoop = 0; //counter for counting loop
 
-int num[] = {-1,-1,-1,-1};  //array for display numbers, {ones, tens, hundreds, thousands}
+int num[] = {0,-1,-1,-1};  //array for display numbers, {ones, tens, hundreds, thousands}
 
 void setup() {
   //setup  pin modes to output
@@ -63,7 +58,6 @@ void setup() {
 void loop() {
   //current timer variables to reset at each iteration
   unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
-  unsigned long currentCount = millis();  //get current milliseconds for counting counter
 
   clearLEDs();
 
@@ -80,17 +74,7 @@ void loop() {
     refreshLoop++;
   }
 
-  //test timer loop, increases count by one at each interval of countInterval
-  if (currentCount - previousCount > countInterval) {
-    previousCount = currentCount;
-
-    splitNumber(countLoop);
-
-    countLoop ++;
-
-    if (countLoop == 10000)
-      countLoop = 0;
-  }
+  testCaseAllNum();
 }
 
 void clearLEDs() {
@@ -100,7 +84,7 @@ void clearLEDs() {
 
 void pickDigit(int j) {
   // pick which digit to display depending on the value passed in j
-  for (int i=0; i<4; i++)
+  for (int i=1; i<4; i++)
     digitalWrite(digits[i], HIGH);
 
   digitalWrite(digits[j], LOW);
@@ -123,7 +107,7 @@ void splitNumber(int n) {
   
   //clear previous values of the num array, -1 value allows checking to see if a new value has been placed
   for (int i=0; i<4; i++)
-    num[i]=-1;
+    num[i] = -1;
 
   //if n is 0-9
   if (n < 10) {
@@ -160,4 +144,26 @@ void updateShiftRegister(byte leds) {
    digitalWrite(latchPin, LOW);
    shiftOut(dataPin, clockPin, LSBFIRST, leds);
    digitalWrite(latchPin, HIGH);
+}
+
+//global variables for the test function
+const long testInterval = 500; //counter delay in milliseconds
+long previousTestTime = 0; //previous count time
+int testLoop = 0; //counter for counting loop
+
+void testCaseAllNum() {
+  //test case, a loop timer that runs through each integer from 0 to 9999
+  unsigned long currentTestTime = millis();  //get current milliseconds for counting counter
+
+  if (currentTestTime - previousTestTime > testInterval) {
+    previousTestTime = currentTestTime;
+
+    splitNumber(testLoop);
+
+    testLoop ++;
+
+    //reset loop to 0 at end of displayable integers
+    if (testLoop == 10000)
+      testLoop = 0;
+  }
 }
