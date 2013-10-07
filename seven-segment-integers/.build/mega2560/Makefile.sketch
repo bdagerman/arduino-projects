@@ -1,0 +1,14 @@
+
+
+
+
+
+.build/mega2560/src/seven-segment.cpp : src/seven-segment.ino
+	@mkdir -p .build/mega2560/src
+	@echo src/seven-segment.ino
+	@/usr/local/bin/ino preproc  -o $@ $^
+
+
+all : .build/mega2560/src/seven-segment.cpp
+	@true
+
