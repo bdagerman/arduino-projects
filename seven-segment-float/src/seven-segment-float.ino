@@ -72,6 +72,8 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
+
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -83,17 +85,18 @@ void loop() {
   //display refresh timer loop, cycles through each digit at the interval of refreshInterval
   if (currentRefresh - previousRefresh > refreshInterval) {
     previousRefresh = currentRefresh;
+    
+    refreshLoop++;
 
     if (refreshLoop == 4)
       refreshLoop = 0;
 
     pickDigit(refreshLoop);
     displayNumber();
-    refreshLoop++;
   }
 
   //testCaseAllNum();
-  splitNumber(888);
+  splitNumber(.1234);
 }
 
 void clearLEDs() {
@@ -118,8 +121,8 @@ void displayNumber() {
 
 void splitNumber(double n) {
   //takes the input n and puts into the array num, split into 4 digits from lsb to msb
-  double decimal = 0.0;
-  int whole = 0;
+  double fractional;
+  double integral;
   int digitsLeft = 0;
   int index = 0;
 
@@ -138,20 +141,28 @@ void splitNumber(double n) {
     negative = true;
   }
 
-  decimal = fmod(n,1.0);
-  whole = n - decimal;
+  fractional = modf(n, &integral);
 
+  int whole = int(integral);
+
+  Serial.print(refreshLoop);
+  Serial.print(": ");
+  Serial.print(integral);
+  Serial.print("\t");
+  Serial.print(fractional,4);
+  Serial.print("\t");
+  
   //split whole number portion first (left of decimal)
-  //if whole is 0-9
+  //if integral is 0-9
   if (whole < 10) {
     splitLeft[0] = whole;
-    digitsLeft = 3;
+    digitsLeft = 4;
   }
   //else if whole is 10-99
   else if (whole < 100) {
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 2;
+    digitsLeft = 3;
   }
   //else if whole is 100-999
   else if (whole < 1000) {
@@ -159,7 +170,7 @@ void splitNumber(double n) {
     whole = whole % 100;
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 1;
+    digitsLeft = 2;
   }
   //else if whole is 1000-9999
   else if (whole < 10000) {
@@ -169,11 +180,16 @@ void splitNumber(double n) {
     whole = whole % 100;
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 0;
+    digitsLeft = 1;
   }
 
-  int decimalToWhole = decimal * (10^digitsLeft);
+  double decimal = fractional * (pow(10,digitsLeft));
 
+  Serial.print(whole);
+  Serial.print("\t");
+  Serial.print(decimal,4);
+  Serial.print("\n");
+/*
   //split decimal number portion next (right of decimal)
   //if decimalToWhole is 0-9
   if (decimalToWhole < 10) {
@@ -201,19 +217,19 @@ void splitNumber(double n) {
     splitRight[0] = decimalToWhole % 10;
   }
 
- /* for (int i=0; i<4; i++) {
+  for (int i=0; i<4; i++) {
     if (splitRight[i]!=-1) {
       displayNum[i] = numbers[splitRight[i]];
       index++;
     }
-  }*/
+  }
 
   for (int j=0; j<4; j++) {
     if (splitLeft[j]!=-1) {
       displayNum[j+index] = numbers[splitLeft[j]];
     }
   }
-
+*/
 }
 
 
