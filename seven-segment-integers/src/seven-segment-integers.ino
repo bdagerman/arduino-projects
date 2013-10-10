@@ -147,7 +147,7 @@ void updateShiftRegister(byte leds) {
 }
 
 //global variables for the test function
-const long testInterval = 1000; //counter delay in milliseconds
+const long testInterval = 100; //counter delay in milliseconds
 long previousTestTime = 0; //previous count time
 int testLoop = 0; //counter for counting loop
 

@@ -56,7 +56,8 @@ const byte off = 0x00;
 
 const byte numbers[] = {zero, one, two, three, four, five, six, seven, eight, nine};
 
-byte num[] = {off, off, off, off};  //array for display numbers from msb to lsb
+byte displayNum[] = {off, off, off, off};  //array for display numbers from msb to lsb
+
 bool negative = false;
 
 const long refreshInterval = 10; //refresh delay in microseconds
@@ -91,7 +92,8 @@ void loop() {
     refreshLoop++;
   }
 
-  testCaseAllNum();
+  //testCaseAllNum();
+  splitNumber(888);
 }
 
 void clearLEDs() {
@@ -111,18 +113,23 @@ void pickDigit(int j) {
 
 void displayNumber() {
   //turn on the LEDs accoring to the number stored in array num on the refresh cycle
-  updateShiftRegister(num[refreshLoop]);
+  updateShiftRegister(displayNum[refreshLoop]);
 }
 
 void splitNumber(double n) {
   //takes the input n and puts into the array num, split into 4 digits from lsb to msb
-  double decimalPart = 0.0;
-  int wholePart = 0;
+  double decimal = 0.0;
+  int whole = 0;
+  int digitsLeft = 0;
+  int index = 0;
+
+  int splitLeft[]={-1,-1,-1.-1};
+  int splitRight[]={-1,-1,-1,-1};
 
   //clear previous values of the num array
   for (int i=0; i<4; i++)
   {
-    num[i] = off;
+    displayNum[i] = off;
     negative = false;
   }
 
@@ -131,68 +138,84 @@ void splitNumber(double n) {
     negative = true;
   }
 
-  decimalPart = fmod(n,1.0);
-  wholePart = n - decimalPart;
+  decimal = fmod(n,1.0);
+  whole = n - decimal;
 
-  int splitPosition = splitWhole(wholePart);
+  //split whole number portion first (left of decimal)
+  //if whole is 0-9
+  if (whole < 10) {
+    splitLeft[0] = whole;
+    digitsLeft = 3;
+  }
+  //else if whole is 10-99
+  else if (whole < 100) {
+    splitLeft[1] = whole / 10;
+    splitLeft[0] = whole % 10;
+    digitsLeft = 2;
+  }
+  //else if whole is 100-999
+  else if (whole < 1000) {
+    splitLeft[2] = whole / 100;
+    whole = whole % 100;
+    splitLeft[1] = whole / 10;
+    splitLeft[0] = whole % 10;
+    digitsLeft = 1;
+  }
+  //else if whole is 1000-9999
+  else if (whole < 10000) {
+    splitLeft[3] = whole / 1000;
+    whole = whole % 1000;
+    splitLeft[2] = whole / 100;
+    whole = whole % 100;
+    splitLeft[1] = whole / 10;
+    splitLeft[0] = whole % 10;
+    digitsLeft = 0;
+  }
 
-  if(negative)
-    num[splitPosition] = minus;
+  int decimalToWhole = decimal * (10^digitsLeft);
+
+  //split decimal number portion next (right of decimal)
+  //if decimalToWhole is 0-9
+  if (decimalToWhole < 10) {
+    splitRight[0] = decimalToWhole;
+  }
+  //else if decimalToWhole is 10-99
+  else if (decimalToWhole < 100) {
+    splitRight[1] = decimalToWhole / 10;
+    splitRight[0] = decimalToWhole % 10;
+  }
+  //else if decimalToWhole is 100-999
+  else if (decimalToWhole < 1000) {
+    splitRight[2] = decimalToWhole / 100;
+    decimalToWhole = decimalToWhole % 100;
+    splitRight[1] = decimalToWhole / 10;
+    splitRight[0] = decimalToWhole % 10;
+  }
+  //else if decimalToWhole is 1000-9999
+  else if (decimalToWhole < 10000) {
+    splitRight[3] = decimalToWhole / 1000;
+    decimalToWhole = decimalToWhole % 1000;
+    splitRight[2] = decimalToWhole / 100;
+    decimalToWhole = decimalToWhole % 100;
+    splitRight[1] = decimalToWhole / 10;
+    splitRight[0] = decimalToWhole % 10;
+  }
+
+ /* for (int i=0; i<4; i++) {
+    if (splitRight[i]!=-1) {
+      displayNum[i] = numbers[splitRight[i]];
+      index++;
+    }
+  }*/
+
+  for (int j=0; j<4; j++) {
+    if (splitLeft[j]!=-1) {
+      displayNum[j+index] = numbers[splitLeft[j]];
+    }
+  }
+
 }
 
-int splitWhole(int n) {
-  //takes the input n and puts into the array num, and return the array position
-  int whole[] = {-1,-1,-1,-1, -1};
-  int wholePosition = 0;
-  int j=0;
-
-  if (negative){
-    if (n > 999) {
-      n = 0;
-      negative = false;
-    }
-    else
-      j = 1;
-  }
-
-  //if n is 0-9
-  if (n < 10) {
-    whole[0+j] = n;
-  }
-  //else if n is 10-99
-  else if (n < 100) {
-    whole[1+j] = n / 10;
-    whole[0+j] = n % 10;
-  }
-  //else if n is 100-999
-  else if (n < 1000) {
-    whole[2+j] = n / 100;
-    n = n % 100;
-    whole[1+j] = n / 10;
-    whole[0+j] = n % 10;
-  }
-  //else if n is 1000-9999
-  else if (n < 10000) {
-    whole[3+j] = n / 1000;
-    n = n % 1000;
-    whole[2+j] = n / 100;
-    n = n % 100;
-    whole[1+j] = n / 10;
-    whole[0+j] = n % 10;
-  }
-  //else n is bigger than the display, so display 0
-  else
-    whole[0] = 0;
-
-  for(int i=0; i<4; i++) {
-    if(whole[i]!=-1) {
-      num[wholePosition] = numbers[whole[i]];
-      wholePosition++;
-    }
-  }
-
-  return wholePosition;
-}
 
 void updateShiftRegister(byte leds) {
   //sends byte to 8-bit shift register to turn on specific LEDs
@@ -203,9 +226,9 @@ void updateShiftRegister(byte leds) {
 
 
 //global variables for the test function
-const long testInterval = 10; //counter delay in milliseconds
+const long testInterval = 500; //counter delay in milliseconds
 long previousTestTime = 0; //previous count time
-int testLoop = -999; //counter for counting loop
+int testLoop = -110; //counter for counting loop
 int resetTestLoop = 10000;
 
 void testCaseAllNum() {
