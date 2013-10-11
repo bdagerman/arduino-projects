@@ -96,7 +96,7 @@ void loop() {
   }
 
   //testCaseAllNum();
-  splitNumber(.1234);
+  splitNumber(.1111);
 }
 
 void clearLEDs() {
@@ -154,15 +154,17 @@ void splitNumber(double n) {
   
   //split whole number portion first (left of decimal)
   //if integral is 0-9
-  if (whole < 10) {
-    splitLeft[0] = whole;
+  if (whole < 1)
     digitsLeft = 4;
+  else if (whole < 10) {
+    splitLeft[0] = whole;
+    digitsLeft = 3;
   }
   //else if whole is 10-99
   else if (whole < 100) {
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 3;
+    digitsLeft = 2;
   }
   //else if whole is 100-999
   else if (whole < 1000) {
@@ -170,7 +172,7 @@ void splitNumber(double n) {
     whole = whole % 100;
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 2;
+    digitsLeft = 1;
   }
   //else if whole is 1000-9999
   else if (whole < 10000) {
@@ -180,15 +182,15 @@ void splitNumber(double n) {
     whole = whole % 100;
     splitLeft[1] = whole / 10;
     splitLeft[0] = whole % 10;
-    digitsLeft = 1;
+    digitsLeft = 0;
   }
 
-  double decimal = fractional * (pow(10,digitsLeft));
-
+  int decimal = int(fractional * (pow(10,digitsLeft)));
   Serial.print(whole);
   Serial.print("\t");
-  Serial.print(decimal,4);
+  Serial.print(decimal);
   Serial.print("\n");
+
 /*
   //split decimal number portion next (right of decimal)
   //if decimalToWhole is 0-9
