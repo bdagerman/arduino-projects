@@ -95,8 +95,8 @@ void loop() {
     displayNumber();
   }
 
-  //testCaseAllNum();
-  splitNumber(.1111);
+  testCaseAllNum();
+  //splitNumber(1000);
 }
 
 void clearLEDs() {
@@ -126,8 +126,8 @@ void splitNumber(double n) {
   int digitsLeft = 0;
   int index = 0;
 
-  int splitLeft[]={-1,-1,-1.-1};
-  int splitRight[]={-1,-1,-1,-1};
+  int splitLeft[4]={-1,-1,-1,-1};
+  int splitRight[4]={0,0,0,0};
 
   //clear previous values of the num array
   for (int i=0; i<4; i++)
@@ -142,98 +142,60 @@ void splitNumber(double n) {
   }
 
   fractional = modf(n, &integral);
-
   int whole = int(integral);
-
-  Serial.print(refreshLoop);
-  Serial.print(": ");
-  Serial.print(integral);
-  Serial.print("\t");
-  Serial.print(fractional,4);
-  Serial.print("\t");
-  
-  //split whole number portion first (left of decimal)
-  //if integral is 0-9
-  if (whole < 1)
-    digitsLeft = 4;
-  else if (whole < 10) {
-    splitLeft[0] = whole;
-    digitsLeft = 3;
-  }
-  //else if whole is 10-99
-  else if (whole < 100) {
-    splitLeft[1] = whole / 10;
-    splitLeft[0] = whole % 10;
-    digitsLeft = 2;
-  }
-  //else if whole is 100-999
-  else if (whole < 1000) {
-    splitLeft[2] = whole / 100;
-    whole = whole % 100;
-    splitLeft[1] = whole / 10;
-    splitLeft[0] = whole % 10;
-    digitsLeft = 1;
-  }
-  //else if whole is 1000-9999
-  else if (whole < 10000) {
-    splitLeft[3] = whole / 1000;
-    whole = whole % 1000;
-    splitLeft[2] = whole / 100;
-    whole = whole % 100;
-    splitLeft[1] = whole / 10;
-    splitLeft[0] = whole % 10;
-    digitsLeft = 0;
-  }
-
+  digitsLeft = numToArray(whole, splitLeft);
   int decimal = int(fractional * (pow(10,digitsLeft)));
-  Serial.print(whole);
-  Serial.print("\t");
-  Serial.print(decimal);
-  Serial.print("\n");
+  numToArray(decimal, splitRight);
 
-/*
-  //split decimal number portion next (right of decimal)
-  //if decimalToWhole is 0-9
-  if (decimalToWhole < 10) {
-    splitRight[0] = decimalToWhole;
-  }
-  //else if decimalToWhole is 10-99
-  else if (decimalToWhole < 100) {
-    splitRight[1] = decimalToWhole / 10;
-    splitRight[0] = decimalToWhole % 10;
-  }
-  //else if decimalToWhole is 100-999
-  else if (decimalToWhole < 1000) {
-    splitRight[2] = decimalToWhole / 100;
-    decimalToWhole = decimalToWhole % 100;
-    splitRight[1] = decimalToWhole / 10;
-    splitRight[0] = decimalToWhole % 10;
-  }
-  //else if decimalToWhole is 1000-9999
-  else if (decimalToWhole < 10000) {
-    splitRight[3] = decimalToWhole / 1000;
-    decimalToWhole = decimalToWhole % 1000;
-    splitRight[2] = decimalToWhole / 100;
-    decimalToWhole = decimalToWhole % 100;
-    splitRight[1] = decimalToWhole / 10;
-    splitRight[0] = decimalToWhole % 10;
-  }
-
-  for (int i=0; i<4; i++) {
-    if (splitRight[i]!=-1) {
+  for (int i=0; i<digitsLeft; i++) {
       displayNum[i] = numbers[splitRight[i]];
       index++;
-    }
+  }
+  
+  for (int j=0; j<4; j++) {
+    if (splitLeft[j]!=-1)
+      displayNum[j+index] = numbers[splitLeft[j]];
   }
 
-  for (int j=0; j<4; j++) {
-    if (splitLeft[j]!=-1) {
-      displayNum[j+index] = numbers[splitLeft[j]];
-    }
-  }
-*/
+  if (digitsLeft > 0)
+    displayNum[digitsLeft]++;
 }
 
+int numToArray(int x, int store[]) {
+  int left = 0;
+
+  // if x is 0 to 9
+  if (x < 10) {
+    store[0] = x;
+    left = 3;
+  }
+  //else if x is 10-99
+  else if (x < 100) {
+    store[1] = x / 10;
+    store[0] = x % 10;
+    left = 2;
+  }
+  //else if x is 100-999
+  else if (x < 1000) {
+    store[2] = x / 100;
+    x = x % 100;
+    store[1] = x / 10;
+    store[0] = x % 10;
+    left = 1;
+  }
+  //else if x is 1000-9999
+  else if (x < 10000) {
+    store[3] = x / 1000;
+    x = x % 1000;
+    store[2] = x / 100;
+    x = x % 100;
+    store[1] = x / 10;
+    store[0] = x % 10;
+    left = 0;
+  }
+
+  return left;
+}
 
 void updateShiftRegister(byte leds) {
   //sends byte to 8-bit shift register to turn on specific LEDs
@@ -245,9 +207,9 @@ void updateShiftRegister(byte leds) {
 
 //global variables for the test function
 const long testInterval = 500; //counter delay in milliseconds
+
 long previousTestTime = 0; //previous count time
-int testLoop = -110; //counter for counting loop
-int resetTestLoop = 10000;
+double testLoop = 0; //counter for counting loop
 
 void testCaseAllNum() {
   //test case, a loop timer that runs through each integer from 0 to 9999
@@ -258,10 +220,10 @@ void testCaseAllNum() {
 
     splitNumber(testLoop);
 
-    testLoop ++;
+    testLoop+=0.05;
 
     //reset loop to 0 at end of displayable integers
-    if (testLoop == resetTestLoop)
-      testLoop = -999;
+    if (testLoop > 9999)
+      testLoop = 0;
   }
 }
