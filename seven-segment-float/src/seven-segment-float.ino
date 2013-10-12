@@ -95,8 +95,8 @@ void loop() {
     displayNumber();
   }
 
-  testCaseAllNum();
-  //splitNumber(1000);
+  //testCaseAllNum();
+  splitNumber(1000);
 }
 
 void clearLEDs() {
