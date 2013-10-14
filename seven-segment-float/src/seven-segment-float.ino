@@ -58,10 +58,6 @@ const byte numbers[] = {zero, one, two, three, four, five, six, seven, eight, ni
 
 byte displayNum[] = {off, off, off, off};  //array for display numbers from msb to lsb
 
-const long refreshInterval = 10; //refresh delay in microseconds
-long previousRefresh = 0; //previous refresh time
-int refreshLoop = 0;  //counter for refreshing loop
-
 void setup() {
   //setup  pin modes to output
   for (int i=0; i<4; i++)
@@ -70,9 +66,11 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
-
-  Serial.begin(9600);
 }
+
+const long refreshInterval = 10; //refresh delay in microseconds
+long previousRefresh = 0; //previous refresh time
+int refreshLoop = 0;  //counter for refreshing loop
 
 void loop() {
   //current timer variables to reset at each iteration
@@ -227,8 +225,9 @@ void displayTemperature () {
   if (currentTempRefresh - previousTempRefresh > tempInterval) {
     previousTempRefresh = currentTempRefresh;
 
-    double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35 
-    double tempF = c2f(tempC);
+    double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
+    double aveTempC = smoothTemp(tempC);
+    double tempF = c2f(aveTempC);
 
     splitNumber(tempF);
   }
@@ -236,4 +235,21 @@ void displayTemperature () {
 
 double c2f (double c) {
   return ((9*c)/5 + 32);
+}
+
+const int numReadings = 20;
+double tempReadings[numReadings];  //an array of analog readings
+int smoothingIndex = 0;      //index for readings
+double smoothingTotal = 0;      //the running total
+
+double smoothTemp (double newReading) {
+  smoothingTotal -= tempReadings[smoothingIndex];
+  tempReadings[smoothingIndex] = newReading;
+  smoothingTotal += tempReadings[smoothingIndex];
+  smoothingIndex ++;
+
+  if(smoothingIndex == numReadings)
+    smoothingIndex = 0;
+
+  return (smoothingTotal/numReadings);
 }
