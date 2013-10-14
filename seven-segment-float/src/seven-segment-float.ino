@@ -93,8 +93,9 @@ void loop() {
     displayNumber();
   }
 
-  testCaseAllNum();
+  //testCaseAllNum();
   //splitNumber(-99.99999);
+  displayTemperature();
 
 }
 
@@ -138,10 +139,10 @@ bool splitNumber(double n) {
   for (i=0; i<4; i++)
     displayNum[i] = off;
 
-  if (n < 0.0) {
-    n = abs(n);
+  if (n < 0.0)
     negative = true;
-  }
+
+  n = abs(n);
 
   fractional = modf(n, &integral);
   fractional = round(fractional*10);
@@ -213,4 +214,26 @@ void testCaseAllNum() {
     if (testLoop > 1000)
       testLoop = -100;
   }
+}
+
+//global variables for LM35 temperature sensor
+const int tempPin = 0;  //analog pin 0
+const long tempInterval = 1000;  //time to delay between refreshing the display, in ms
+long previousTempRefresh = 0; //previous temperature refresh
+
+void displayTemperature () {
+  unsigned long currentTempRefresh = millis();
+
+  if (currentTempRefresh - previousTempRefresh > tempInterval) {
+    previousTempRefresh = currentTempRefresh;
+
+    double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35 
+    double tempF = c2f(tempC);
+
+    splitNumber(tempF);
+  }
+}
+
+double c2f (double c) {
+  return ((9*c)/5 + 32);
 }
