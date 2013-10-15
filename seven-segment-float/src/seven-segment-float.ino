@@ -8,6 +8,8 @@ The display shows floats up to four digits
 Copyright (c) 2013 Bryan Dagerman
 */
 #include <math.h>
+#include "OneWire.h"
+
 
 //set cathode pins, controls which digit is displayed
 const int digits[] = {4, 5, 6, 7};
@@ -19,6 +21,9 @@ const int clockPin = 10;
 
 //set pin for the toggle button
 const int buttonPin = 11;
+
+//ds18b20 one-wire digital temperature sensor on digital pin 12
+OneWire ds(12);
 
 /* General LED layout of seven-segment display
   ___
@@ -70,8 +75,6 @@ void setup() {
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
 
-  pinMode(buttonPin, INPUT);
-
   Serial.begin(9600);
 }
 
@@ -84,10 +87,6 @@ bool displayCelcius = true;
 void loop() {
   //current timer variables to reset at each iteration
   unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
-
-  buttonState = digitalRead(buttonPin); 
-  if (buttonState == HIGH)
-    displayCelcius = !(displayCelcius);
 
   clearLEDs();
 
@@ -103,6 +102,10 @@ void loop() {
     pickDigit(refreshLoop);
     displayNumber();
   }
+
+  buttonState = digitalRead(buttonPin); 
+  if (buttonState == HIGH)
+    displayCelcius = !(displayCelcius);
 
   //testCaseAllNum();
   //splitNumber(-99.99999);
@@ -237,14 +240,14 @@ void displayTemperature () {
   if (currentTempRefresh - previousTempRefresh > tempInterval) {
     previousTempRefresh = currentTempRefresh;
 
-    double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
+    /*double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
     double aveTempC = smoothTemp(tempC);
     double aveTempF = c2f(aveTempC);
     
     if (displayCelcius)
       splitNumber(aveTempC);
     else
-      splitNumber(aveTempF);
+      splitNumber(aveTempF);*/
   }
 }
 
