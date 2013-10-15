@@ -17,6 +17,9 @@ const int dataPin = 8;
 const int latchPin = 9;
 const int clockPin = 10;
 
+//set pin for the toggle button
+const int buttonPin = 11;
+
 /* General LED layout of seven-segment display
   ___
 F| A |B 
@@ -66,15 +69,25 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
+
+  pinMode(buttonPin, INPUT);
+
+  Serial.begin(9600);
 }
 
 const long refreshInterval = 10; //refresh delay in microseconds
 long previousRefresh = 0; //previous refresh time
 int refreshLoop = 0;  //counter for refreshing loop
+int buttonState = 0;
+bool displayCelcius = true;
 
 void loop() {
   //current timer variables to reset at each iteration
   unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
+
+  buttonState = digitalRead(buttonPin); 
+  if (buttonState == HIGH)
+    displayCelcius = !(displayCelcius);
 
   clearLEDs();
 
@@ -94,7 +107,6 @@ void loop() {
   //testCaseAllNum();
   //splitNumber(-99.99999);
   displayTemperature();
-
 }
 
 void clearLEDs() {
@@ -227,9 +239,12 @@ void displayTemperature () {
 
     double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
     double aveTempC = smoothTemp(tempC);
-    double tempF = c2f(aveTempC);
-
-    splitNumber(tempF);
+    double aveTempF = c2f(aveTempC);
+    
+    if (displayCelcius)
+      splitNumber(aveTempC);
+    else
+      splitNumber(aveTempF);
   }
 }
 
