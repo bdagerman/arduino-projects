@@ -10,7 +10,6 @@ Copyright (c) 2013 Bryan Dagerman
 #include <math.h>
 #include "OneWire.h"
 
-
 //set cathode pins, controls which digit is displayed
 const int digits[] = {4, 5, 6, 7};
 
@@ -65,52 +64,11 @@ const byte off = 0x00;
 const byte numbers[] = {zero, one, two, three, four, five, six, seven, eight, nine};
 
 byte displayNum[] = {off, off, off, off};  //array for display numbers from msb to lsb
-
-void setup() {
-  //setup  pin modes to output
-  for (int i=0; i<4; i++)
-    pinMode(digits[i], OUTPUT);
-
-  pinMode(latchPin, OUTPUT);
-  pinMode(dataPin, OUTPUT);  
-  pinMode(clockPin, OUTPUT);
-
-  Serial.begin(9600);
-}
-
+bool displayCelcius = true;
 const long refreshInterval = 10; //refresh delay in microseconds
 long previousRefresh = 0; //previous refresh time
 int refreshLoop = 0;  //counter for refreshing loop
 int buttonState = 0;
-bool displayCelcius = true;
-
-void loop() {
-  //current timer variables to reset at each iteration
-  unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
-
-  clearLEDs();
-
-  //display refresh timer loop, cycles through each digit at the interval of refreshInterval
-  if (currentRefresh - previousRefresh > refreshInterval) {
-    previousRefresh = currentRefresh;
-    
-    refreshLoop++;
-
-    if (refreshLoop == 4)
-      refreshLoop = 0;
-
-    pickDigit(refreshLoop);
-    displayNumber();
-  }
-
-  buttonState = digitalRead(buttonPin); 
-  if (buttonState == HIGH)
-    displayCelcius = !(displayCelcius);
-
-  //testCaseAllNum();
-  //splitNumber(-99.99999);
-  displayTemperature();
-}
 
 void clearLEDs() {
   //blank out LEDs for current digit
@@ -206,53 +164,55 @@ bool splitNumber(double n) {
   return true;
 }
 
-//global variables for the test function
-const long testInterval = 50; //counter delay in milliseconds
-
-long previousTestTime = 0; //previous count time
-double testLoop = -100; //counter for counting loop
-
-void testCaseAllNum() {
-  //test case, a loop timer that runs through each integer from 0 to 9999
-  unsigned long currentTestTime = millis();  //get current milliseconds for counting counter
-
-  if (currentTestTime - previousTestTime > testInterval) {
-    previousTestTime = currentTestTime;
-
-    splitNumber(testLoop);
-
-    testLoop+=0.1;
-
-    //reset loop to 0 at end of displayable integers
-    if (testLoop > 1000)
-      testLoop = -100;
-  }
-}
-
-//global variables for LM35 temperature sensor
-const int tempPin = 0;  //analog pin 0
-const long tempInterval = 1000;  //time to delay between refreshing the display, in ms
-long previousTempRefresh = 0; //previous temperature refresh
+double tempC = 0;
 
 void displayTemperature () {
-  unsigned long currentTempRefresh = millis();
+  getTemperature(); //poll analog to read value from LM35
+  double aveTempC = smoothTemp(tempC);
+  double aveTempF = c2f(aveTempC);
+  
+  if (displayCelcius)
+    splitNumber(aveTempC);
+  else
+    splitNumber(aveTempF);
+}
 
-  if (currentTempRefresh - previousTempRefresh > tempInterval) {
-    previousTempRefresh = currentTempRefresh;
+boolean converting = false;
+unsigned long startConvert;
 
-    /*double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
-    double aveTempC = smoothTemp(tempC);
-    double aveTempF = c2f(aveTempC);
-    
-    if (displayCelcius)
-      splitNumber(aveTempC);
-    else
-      splitNumber(aveTempF);*/
+void getTemperature() {
+  byte data[12];
+  byte addr[8];
+  double celcius = 0;
+
+  if (!converting) {
+    ds.reset();
+    //select the DS device
+    ds.skip();
+    //start conversion then wait for the command to finish
+    ds.write(0x44,1);
+    converting = true;
+    startConvert = millis();
+  }
+
+  if (((millis()-startConvert) > 1000) && converting) {
+    byte present = ds.reset();
+    ds.skip();
+    //Send read scratchpad command
+    ds.write(0xBE,0);
+
+    //Get the 9 bytes
+    for(byte i=0; i<9; i++)
+      data[i]=ds.read();
+
+    //Calculate temperature value
+    converting = false;
+    tempC = ((data[1] << 8) + data[0]) * 0.0625;
   }
 }
 
 double c2f (double c) {
-  return ((9*c)/5 + 32);
+  return ((9.0*c)/5.0 + 32.0);
 }
 
 const int numReadings = 20;
@@ -270,4 +230,42 @@ double smoothTemp (double newReading) {
     smoothingIndex = 0;
 
   return (smoothingTotal/numReadings);
+}
+
+void setup() {
+  //setup  pin modes to output
+  for (int i=0; i<4; i++)
+    pinMode(digits[i], OUTPUT);
+
+  pinMode(latchPin, OUTPUT);
+  pinMode(dataPin, OUTPUT);  
+  pinMode(clockPin, OUTPUT);
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  //current timer variables to reset at each iteration
+  unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
+
+  clearLEDs();
+
+  //display refresh timer loop, cycles through each digit at the interval of refreshInterval
+  if (currentRefresh - previousRefresh > refreshInterval) {
+    previousRefresh = currentRefresh;
+    
+    refreshLoop++;
+
+    if (refreshLoop == 4)
+      refreshLoop = 0;
+
+    pickDigit(refreshLoop);
+    displayNumber();
+  }
+
+  buttonState = digitalRead(buttonPin); 
+  if (buttonState == HIGH)
+    displayCelcius = !(displayCelcius);
+
+  displayTemperature();
 }
