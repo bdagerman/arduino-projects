@@ -8,7 +8,11 @@ The display shows floats up to four digits
 Copyright (c) 2013 Bryan Dagerman
 */
 #include <math.h>
-#include "OneWire.h"
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+OneWire oneWire(12); //the DS one-wire bus is on pin 12
+DallasTemperature sensors(&oneWire);  //The temp sensor(s) on the one-wire bus
 
 //set cathode pins, controls which digit is displayed
 const int digits[] = {4, 5, 6, 7};
@@ -21,8 +25,8 @@ const int clockPin = 10;
 //set pin for the toggle button
 const int buttonPin = 11;
 
-//ds18b20 one-wire digital temperature sensor on digital pin 12
-OneWire ds(12);
+//pin for the LM35 analog temp sensor
+const int LM35_PIN = 0;
 
 /* General LED layout of seven-segment display
   ___
@@ -64,9 +68,7 @@ const byte off = 0x00;
 const byte numbers[] = {zero, one, two, three, four, five, six, seven, eight, nine};
 
 byte displayNum[] = {off, off, off, off};  //array for display numbers from msb to lsb
-bool displayCelcius = true;
-const long refreshInterval = 10; //refresh delay in microseconds
-long previousRefresh = 0; //previous refresh time
+bool toggleSensor = true;
 int refreshLoop = 0;  //counter for refreshing loop
 int buttonState = 0;
 
@@ -164,51 +166,20 @@ bool splitNumber(double n) {
   return true;
 }
 
-double tempC = 0;
+void updateTemp () {
+  double tempC = 0;
 
-void displayTemperature () {
-  getTemperature(); //poll analog to read value from LM35
-  double aveTempC = smoothTemp(tempC);
-  double aveTempF = c2f(aveTempC);
-  
-  if (displayCelcius)
-    splitNumber(aveTempC);
-  else
-    splitNumber(aveTempF);
-}
-
-boolean converting = false;
-unsigned long startConvert;
-
-void getTemperature() {
-  byte data[12];
-  byte addr[8];
-  double celcius = 0;
-
-  if (!converting) {
-    ds.reset();
-    //select the DS device
-    ds.skip();
-    //start conversion then wait for the command to finish
-    ds.write(0x44,1);
-    converting = true;
-    startConvert = millis();
+  if (toggleSensor)
+    tempC = (500.0 * analogRead(LM35_PIN)) / 1024;
+  else {
+    sensors.requestTemperatures();
+    tempC = sensors.getTempCByIndex(0);
   }
 
-  if (((millis()-startConvert) > 1000) && converting) {
-    byte present = ds.reset();
-    ds.skip();
-    //Send read scratchpad command
-    ds.write(0xBE,0);
+  //double aveTempC = smoothTemp(tempC);
+  double aveTempF = c2f(tempC);
 
-    //Get the 9 bytes
-    for(byte i=0; i<9; i++)
-      data[i]=ds.read();
-
-    //Calculate temperature value
-    converting = false;
-    tempC = ((data[1] << 8) + data[0]) * 0.0625;
-  }
+  splitNumber(aveTempF);
 }
 
 double c2f (double c) {
@@ -244,10 +215,14 @@ void setup() {
   Serial.begin(9600);
 }
 
+const long refreshInterval = 10; //refresh delay in microseconds
+long previousRefresh = 0; //previous refresh time
+const long sensorDelay = 2000;  //refresh delay for temp sensor update, in milliseconds
+long prevSensorUpdate = 0;  //previous sensor update
 void loop() {
   //current timer variables to reset at each iteration
   unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
-
+  unsigned long sensorUpdate = millis();
   clearLEDs();
 
   //display refresh timer loop, cycles through each digit at the interval of refreshInterval
@@ -263,9 +238,15 @@ void loop() {
     displayNumber();
   }
 
-  buttonState = digitalRead(buttonPin); 
-  if (buttonState == HIGH)
-    displayCelcius = !(displayCelcius);
+  buttonState = digitalRead(buttonPin);
+  if (buttonState == HIGH) {
+    toggleSensor = !(toggleSensor);
+    updateTemp();
+  }
 
-  displayTemperature();
+  if(sensorUpdate - prevSensorUpdate > sensorDelay) {
+    prevSensorUpdate = sensorUpdate;
+
+    updateTemp();
+  }
 }

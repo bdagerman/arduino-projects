@@ -34,6 +34,8 @@ byte numbers[] = {0xfc, 0x60, 0xda, 0xf2, 0x66, 0xb6, 0xbe, 0xe0, 0xfe, 0xe6};
 //set cathode pins, controls which digit is displayed
 const int digits[] = {4, 5, 6, 7};
 
+const int buttonPin = 2;
+
 //set pins for 74HC595 8-bit register to control anodes, controls which segments display
 const int dataPin = 8;
 const int latchPin = 9;
@@ -45,6 +47,15 @@ int refreshLoop = 0;  //counter for refreshing loop
 
 int num[] = {0,-1,-1,-1};  //array for display numbers, {ones, tens, hundreds, thousands}
 
+int buttonCount = 0;
+
+
+void countButton() {
+  for (int i=0; i<30; i++)
+    delayMicroseconds(5000);
+  buttonCount ++;
+}
+
 void setup() {
   //setup  pin modes to output
   for (int i=0; i<4; i++)
@@ -53,6 +64,10 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
+
+  pinMode(buttonPin, INPUT);
+
+  attachInterrupt(0, countButton, RISING);
 }
 
 void loop() {
@@ -74,8 +89,9 @@ void loop() {
     refreshLoop++;
   }
 
-  testCaseAllNum();
+  splitNumber(buttonCount);
 }
+
 
 void clearLEDs() {
   //blank out LEDs for current digit
