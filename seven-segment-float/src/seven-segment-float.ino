@@ -17,6 +17,9 @@ const int dataPin = 8;
 const int latchPin = 9;
 const int clockPin = 10;
 
+//set pin for the toggle button
+const int buttonPin = 11;
+
 /* General LED layout of seven-segment display
   ___
 F| A |B 
@@ -58,12 +61,6 @@ const byte numbers[] = {zero, one, two, three, four, five, six, seven, eight, ni
 
 byte displayNum[] = {off, off, off, off};  //array for display numbers from msb to lsb
 
-bool negative = false;
-
-const long refreshInterval = 10; //refresh delay in microseconds
-long previousRefresh = 0; //previous refresh time
-int refreshLoop = 0;  //counter for refreshing loop
-
 void setup() {
   //setup  pin modes to output
   for (int i=0; i<4; i++)
@@ -73,12 +70,24 @@ void setup() {
   pinMode(dataPin, OUTPUT);  
   pinMode(clockPin, OUTPUT);
 
+  pinMode(buttonPin, INPUT);
+
   Serial.begin(9600);
 }
+
+const long refreshInterval = 10; //refresh delay in microseconds
+long previousRefresh = 0; //previous refresh time
+int refreshLoop = 0;  //counter for refreshing loop
+int buttonState = 0;
+bool displayCelcius = true;
 
 void loop() {
   //current timer variables to reset at each iteration
   unsigned long currentRefresh = micros();  //get current microseconds for refresh counter
+
+  buttonState = digitalRead(buttonPin); 
+  if (buttonState == HIGH)
+    displayCelcius = !(displayCelcius);
 
   clearLEDs();
 
@@ -96,7 +105,8 @@ void loop() {
   }
 
   //testCaseAllNum();
-  splitNumber(1000);
+  //splitNumber(-99.99999);
+  displayTemperature();
 }
 
 void clearLEDs() {
@@ -119,84 +129,6 @@ void displayNumber() {
   updateShiftRegister(displayNum[refreshLoop]);
 }
 
-void splitNumber(double n) {
-  //takes the input n and puts into the array num, split into 4 digits from lsb to msb
-  double fractional;
-  double integral;
-  int digitsLeft = 0;
-  int index = 0;
-
-  int splitLeft[4]={-1,-1,-1,-1};
-  int splitRight[4]={0,0,0,0};
-
-  //clear previous values of the num array
-  for (int i=0; i<4; i++)
-  {
-    displayNum[i] = off;
-    negative = false;
-  }
-
-  if (n < 0) {
-    n = abs(n);
-    negative = true;
-  }
-
-  fractional = modf(n, &integral);
-  int whole = int(integral);
-  digitsLeft = numToArray(whole, splitLeft);
-  int decimal = int(fractional * (pow(10,digitsLeft)));
-  numToArray(decimal, splitRight);
-
-  for (int i=0; i<digitsLeft; i++) {
-      displayNum[i] = numbers[splitRight[i]];
-      index++;
-  }
-  
-  for (int j=0; j<4; j++) {
-    if (splitLeft[j]!=-1)
-      displayNum[j+index] = numbers[splitLeft[j]];
-  }
-
-  if (digitsLeft > 0)
-    displayNum[digitsLeft]++;
-}
-
-int numToArray(int x, int store[]) {
-  int left = 0;
-
-  // if x is 0 to 9
-  if (x < 10) {
-    store[0] = x;
-    left = 3;
-  }
-  //else if x is 10-99
-  else if (x < 100) {
-    store[1] = x / 10;
-    store[0] = x % 10;
-    left = 2;
-  }
-  //else if x is 100-999
-  else if (x < 1000) {
-    store[2] = x / 100;
-    x = x % 100;
-    store[1] = x / 10;
-    store[0] = x % 10;
-    left = 1;
-  }
-  //else if x is 1000-9999
-  else if (x < 10000) {
-    store[3] = x / 1000;
-    x = x % 1000;
-    store[2] = x / 100;
-    x = x % 100;
-    store[1] = x / 10;
-    store[0] = x % 10;
-    left = 0;
-  }
-
-  return left;
-}
-
 void updateShiftRegister(byte leds) {
   //sends byte to 8-bit shift register to turn on specific LEDs
    digitalWrite(latchPin, LOW);
@@ -204,12 +136,78 @@ void updateShiftRegister(byte leds) {
    digitalWrite(latchPin, HIGH);
 }
 
+bool splitNumber(double n) {
+  //takes the input n and puts into the array num, split into 4 digits from lsb to msb
+  double fractional;
+  double integral;
+  int i;
+  bool negative = false;
+
+  int store[]={-1,-1,-1,-1};
+
+  //clear previous values of the num array
+  for (i=0; i<4; i++)
+    displayNum[i] = off;
+
+  if (n < 0.0)
+    negative = true;
+
+  n = abs(n);
+
+  fractional = modf(n, &integral);
+  fractional = round(fractional*10);
+  int decimal = int(fractional);
+  int whole = int(integral);
+
+  if (decimal >= 10) {
+    decimal = 0;
+    whole++;
+  }
+
+  if (negative) {
+    if (whole >= 100)
+      return false;
+    displayNum[3] = minus;
+  }
+  else {
+    if (whole >= 1000)
+      return false;
+  }
+  
+  displayNum[0] = numbers[decimal];
+
+  // if whole is 0 to 9
+  if (whole < 10) {
+    store[1] = whole;
+  }
+  //else if whole is 10-99
+  else if (whole < 100) {
+    store[2] = whole / 10;
+    store[1] = whole % 10;
+  }
+  //else if whole is 100-999
+  else if (whole < 1000) {
+    store[3] = whole / 100;
+    whole = whole % 100;
+    store[2] = whole / 10;
+    store[1] = whole % 10;
+  }
+  
+  for (i=1; i<4; i++) {
+    if (store[i]!=-1)
+      displayNum[i] = numbers[store[i]];
+  }
+
+  displayNum[1]++;
+
+  return true;
+}
 
 //global variables for the test function
-const long testInterval = 500; //counter delay in milliseconds
+const long testInterval = 50; //counter delay in milliseconds
 
 long previousTestTime = 0; //previous count time
-double testLoop = 0; //counter for counting loop
+double testLoop = -100; //counter for counting loop
 
 void testCaseAllNum() {
   //test case, a loop timer that runs through each integer from 0 to 9999
@@ -220,10 +218,53 @@ void testCaseAllNum() {
 
     splitNumber(testLoop);
 
-    testLoop+=0.05;
+    testLoop+=0.1;
 
     //reset loop to 0 at end of displayable integers
-    if (testLoop > 9999)
-      testLoop = 0;
+    if (testLoop > 1000)
+      testLoop = -100;
   }
+}
+
+//global variables for LM35 temperature sensor
+const int tempPin = 0;  //analog pin 0
+const long tempInterval = 1000;  //time to delay between refreshing the display, in ms
+long previousTempRefresh = 0; //previous temperature refresh
+
+void displayTemperature () {
+  unsigned long currentTempRefresh = millis();
+
+  if (currentTempRefresh - previousTempRefresh > tempInterval) {
+    previousTempRefresh = currentTempRefresh;
+
+    double tempC = (500.0 * analogRead(tempPin)) / 1204; //poll analog to read value from LM35
+    double aveTempC = smoothTemp(tempC);
+    double aveTempF = c2f(aveTempC);
+    
+    if (displayCelcius)
+      splitNumber(aveTempC);
+    else
+      splitNumber(aveTempF);
+  }
+}
+
+double c2f (double c) {
+  return ((9*c)/5 + 32);
+}
+
+const int numReadings = 20;
+double tempReadings[numReadings];  //an array of analog readings
+int smoothingIndex = 0;      //index for readings
+double smoothingTotal = 0;      //the running total
+
+double smoothTemp (double newReading) {
+  smoothingTotal -= tempReadings[smoothingIndex];
+  tempReadings[smoothingIndex] = newReading;
+  smoothingTotal += tempReadings[smoothingIndex];
+  smoothingIndex ++;
+
+  if(smoothingIndex == numReadings)
+    smoothingIndex = 0;
+
+  return (smoothingTotal/numReadings);
 }
